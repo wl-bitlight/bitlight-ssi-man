@@ -1,0 +1,51 @@
+[env]
+SQLITE_VERSION = "3470000"
+SQLITE_YEAR = "2024"
+SQLITE_BASENAME = "sqlite-amalgamation-${SQLITE_VERSION}"
+SQLITE_URL = "https://www.sqlite.org/${SQLITE_YEAR}/${SQLITE_BASENAME}.zip"
+
+[tasks.download]
+description = "Download SQLite zip package"
+command = "wget"
+args = ["-N", "-c", "${SQLITE_URL}"]
+condition = { files_not_exist = ["${SQLITE_BASENAME}.zip"] }
+
+[tasks.unpack]
+description = "Unpack SQLite zip package"
+dependencies = ["download"]
+command = "sh"
+args = [
+    "-c",
+    "unzip -oq ${SQLITE_BASENAME}.zip && rm -rf build && mv ${SQLITE_BASENAME} build"
+]
+
+[tasks.build-android]
+description = "Build SQLite3 static library for Android"
+command = "${ANDROID_NDK_HOME}/ndk-build"
+dependencies = ["unpack"]
+
+[tasks.build-ios]
+description = "Build SQLite3 static library for IOS"
+cwd = "./build"
+script = '''
+mkdir -p ../obj/local/arm64-ios
+IOS_SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+clang -c -isysroot "$IOS_SDK" -arch arm64 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_FTS5=1 sqlite3.c -o sqlite3_arm64.o
+libtool -static -o ../obj/local/arm64-ios/libsqlite3.a sqlite3_arm64.o
+'''
+dependencies = ["unpack"]
+
+[tasks.default]
+clear = true
+dependencies = ["build-android", "build-ios"]
+
+[tasks.clean]
+description = "Clean build files"
+command = "rm"
+args = [
+    "-rf", "${SQLITE_BASENAME}.zip",
+    "-rf", "${SQLITE_BASENAME}",
+    "-rf", "build",
+    "-rf", "obj",
+    "-rf", "libs"
+]

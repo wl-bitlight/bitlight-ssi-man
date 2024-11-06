@@ -1,0 +1,37 @@
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--workspace", "--features", "sqlite", "--all-targets", "--tests", "--", "-D", "warnings"]
+
+[tasks.build-sqlite3]
+command = "makers"
+cwd = "./sqlite3"
+
+[tasks.build-android]
+command = "cargo"
+args = ["ndk", "--target", "aarch64-linux-android", "build", "--features", "sqlite", "--release"]
+install_crate = true
+dependencies = ["build-sqlite3"]
+
+[tasks.build-ios]
+command = "cargo"
+args = ["build", "--features", "sqlite", "--target", "aarch64-apple-ios", "--release"]
+
+[tasks.build-all]
+dependencies = ["build-android", "build-ios"]
+
+[tasks.tarball]
+cwd = "./target"
+script = '''
+temp_dir=libssi_man
+mkdir -p "${temp_dir}/android" "${temp_dir}/ios"
+cp aarch64-linux-android/release/libssi_man.a "${temp_dir}/android"
+cp aarch64-apple-ios/release/libssi_man.a "${temp_dir}/ios"
+cp -r include "${temp_dir}/"
+tar -czvf "libssi_man.tar.gz" -C "$temp_dir" .
+rm -rf "{temp_dir}"
+'''
+
+[tasks.nextest]
+command = "cargo"
+args = ["nextest", "run", "--features", "sqlite", "--nocapture"]
+install_crate = true

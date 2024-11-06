@@ -1,0 +1,5 @@
+/.idea
+/sqlite3/build
+/sqlite3/libs
+/sqlite3/obj
+/target
